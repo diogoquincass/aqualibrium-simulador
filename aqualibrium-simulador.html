@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador de treino Aqualibrium</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#E3E9EA; --surface:#F8FAFA; --ink:#0F1F26; --muted:#56676E; --line:#CBD5D8;
+  --board:#FBFCFC; --board-edge:#BFCBCE; --peg:#D2DBDD; --guide:#B4C2C6;
+  --fit:#EEF2F3; --fit-edge:#7F8F98;
+  --tube-edge:rgba(172,38,30,.92); --tube-wall:rgba(242,168,158,.92);
+  --t3-edge:rgba(60,105,135,.6); --t3-wall:rgba(206,229,241,.95);
+  --tube-empty:rgba(255,255,255,.75); --water:#1C86C6; --water-deep:#0D5C8E; --water-hi:rgba(255,255,255,.85);
+  --pipe6:#C8372B; --pipe3:#1C86C6; --res-fill:#D6EAF6;
+  --accent:#0D5C8E; --on-accent:#FFFFFF; --hover:rgba(28,134,198,.16);
+  --ok:#24774A; --bad:#B42A20; --warn:#8A5D0B; --tick:#71838B; --glass:rgba(214,232,241,.55);
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --page:#0A1317; --surface:#101C22; --ink:#E2EBED; --muted:#91A4AB; --line:#24343C;
+    --board:#14232A; --board-edge:#2B3E47; --peg:#203139; --guide:#3A4F59;
+    --fit:#D3DBDE; --fit-edge:#6A7C85;
+    --tube-edge:rgba(238,96,82,.88); --tube-wall:rgba(238,96,82,.26);
+    --t3-edge:rgba(150,200,230,.55); --t3-wall:rgba(120,170,200,.24);
+    --tube-empty:rgba(255,255,255,.07); --water:#3FA3E3; --water-deep:#2A84C1; --water-hi:rgba(255,255,255,.75);
+    --pipe6:#EE6252; --pipe3:#4BA6DE; --res-fill:#173A52;
+    --accent:#3FA3E3; --on-accent:#061218; --hover:rgba(63,163,227,.18);
+    --ok:#5DBB83; --bad:#F07C70; --warn:#E3B45A; --tick:#7F949C; --glass:rgba(120,170,200,.10);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0A1317; --surface:#101C22; --ink:#E2EBED; --muted:#91A4AB; --line:#24343C;
+  --board:#14232A; --board-edge:#2B3E47; --peg:#203139; --guide:#3A4F59;
+  --fit:#D3DBDE; --fit-edge:#6A7C85;
+  --tube-edge:rgba(238,96,82,.88); --tube-wall:rgba(238,96,82,.26);
+  --t3-edge:rgba(150,200,230,.55); --t3-wall:rgba(120,170,200,.24);
+  --tube-empty:rgba(255,255,255,.07); --water:#3FA3E3; --water-deep:#2A84C1; --water-hi:rgba(255,255,255,.75);
+  --pipe6:#EE6252; --pipe3:#4BA6DE; --res-fill:#173A52;
+  --accent:#3FA3E3; --on-accent:#061218; --hover:rgba(63,163,227,.18);
+  --ok:#5DBB83; --bad:#F07C70; --warn:#E3B45A; --tick:#7F949C; --glass:rgba(120,170,200,.10);
+  color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--page);color:var(--ink);font-family:"Archivo",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15.5px;line-height:1.45;font-variant-numeric:tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:22px 20px 56px}
+
+/* cabeçalho */
+.top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px 28px;padding:6px 0 22px;margin-bottom:22px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:14px}
+.brand svg{flex:none}
+.brand h1{margin:0;font-size:clamp(1.6rem,3vw,2.15rem);font-weight:800;letter-spacing:-.02em;line-height:1}
+.brand p{margin:5px 0 0;color:var(--muted);font-size:.95rem}
+.clockbox{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 10px 8px 16px}
+.clockbox .cap{font-size:.8rem;color:var(--muted);line-height:1.1}
+.clock{font-size:2rem;font-weight:700;letter-spacing:-.02em;min-width:4.6ch;text-align:right;line-height:1}
+.clock.low{color:var(--bad)}
+
+/* grade principal */
+.main{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(320px,.88fr);gap:26px;align-items:start}
+@media (max-width:900px){.main{grid-template-columns:1fr}}
+.below{margin-top:28px;padding-top:22px;border-top:1px solid var(--line)}
+.stylepick{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin:0 0 12px}
+button.big{padding:11px 26px;font-size:1.02rem}
+.bestbox{margin-top:20px;padding:14px 16px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.bestbox h3{margin:0 0 10px;font-size:.95rem;font-weight:700}
+.bestbox .seg{background:var(--page)}
+.stylepick .cap{font-size:.88rem;color:var(--muted)}
+.extra{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:0 0 14px;font-size:.9rem}
+.extra .cap{color:var(--muted);font-size:.88rem;width:100%}
+.extra label{display:inline-flex;align-items:center;gap:7px;cursor:pointer}
+.extra input{width:17px;height:17px;accent-color:var(--water)}
+.recipe{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px}
+@media (max-width:520px){.recipe{grid-template-columns:1fr}}
+.rline{display:flex;gap:6px 8px;align-items:center;flex-wrap:wrap;font-size:.88rem}
+.rname{font-weight:700;min-width:66px}
+.chip{border-radius:999px;padding:1px 9px;font-size:.82rem;border:1.5px solid;white-space:nowrap}
+.chip.c1{background:var(--water);border-color:var(--water);color:var(--on-accent)}
+.chip.c2{background:var(--t3-wall);border-color:var(--t3-edge);color:var(--ink)}
+.chip.c0{border-style:dashed;border-color:var(--guide);color:var(--muted)}
+.toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:0;border-radius:7px;padding:7px 13px;background:transparent;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--page)}
+#board{display:block;width:100%;height:auto;touch-action:manipulation;filter:drop-shadow(0 10px 24px rgba(10,30,40,.10))}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:.88rem;color:var(--muted);margin:12px 4px 0}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.hint{color:var(--muted);font-size:.9rem;margin:8px 4px 0}
+
+button{font:inherit;font-weight:600;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:8px 14px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button:disabled{opacity:.5;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+button.ghost{background:transparent}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--water);outline-offset:2px}
+
+/* painel lateral */
+.panel > section{padding:0 0 22px;margin:0 0 22px;border-bottom:1px solid var(--line)}
+.panel > section:last-child{border-bottom:0;margin-bottom:0}
+h2{font-size:1.05rem;font-weight:700;margin:0 0 12px;letter-spacing:-.005em}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.optrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.status{color:var(--muted);font-size:.9rem;margin:8px 0 0;min-height:1em}
+
+.kit{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:4px}
+@media (max-width:420px){.kit{grid-template-columns:1fr}}
+.piece{display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:4px 10px}
+.piece svg{grid-row:span 2}
+.piece .nm{font-size:.9rem}
+.piece .ct{font-weight:700;font-size:.9rem}
+.piece .ct.over{color:var(--bad)}
+.piece .bar{grid-column:2/4;height:4px;border-radius:2px;background:var(--line);overflow:hidden}
+.piece .bar i{display:block;height:100%;background:var(--water)}
+.piece .bar i.over{background:var(--bad)}
+.msgs{list-style:none;padding:0;margin:14px 0 0;font-size:.9rem}
+.msgs li{padding:3px 0 3px 16px;position:relative}
+.msgs li::before{content:"";position:absolute;left:0;top:.68em;width:8px;height:8px;border-radius:50%}
+.msgs li.err::before{background:var(--bad)} .msgs li.rule::before{background:var(--warn)} .msgs li.info::before{background:var(--muted)} .msgs li.ok::before{background:var(--ok)}
+
+/* provetas */
+.cyls{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:2px 0 16px}
+.cyl{text-align:center}
+.glass{position:relative;height:190px;margin:0 auto;max-width:96px;border:2px solid var(--fit-edge);border-top:0;border-radius:0 0 14px 14px;background:var(--glass);overflow:hidden}
+.glass::after{content:"";position:absolute;top:0;bottom:0;left:16%;width:8%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);pointer-events:none}
+.glass .ticks{position:absolute;left:0;top:0;bottom:0;width:14px;background:repeating-linear-gradient(to top,var(--tick) 0 1px,transparent 1px calc(100%/6));opacity:.7;z-index:2}
+.glass .water{position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(180deg,var(--water),var(--water-deep))}
+.glass .water::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--water-hi);opacity:.55}
+.glass .mark{position:absolute;left:0;right:0;bottom:66.667%;border-top:2px dashed var(--ink);opacity:.6;z-index:3}
+.glass .mark span{position:absolute;right:4px;top:-17px;font-size:.72rem;font-weight:700}
+.cvol{font-size:1.25rem;font-weight:700;margin-top:8px;letter-spacing:-.01em}
+.cdev{font-size:.82rem;color:var(--muted)}
+.clab{font-size:.85rem;color:var(--muted)}
+.score{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.score .big{font-size:2.8rem;font-weight:800;letter-spacing:-.03em;line-height:1}
+.score .unit{color:var(--muted);font-size:.92rem}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0 0}
+.stats div{border-left:2px solid var(--line);padding-left:10px}
+.stats dt{font-size:.78rem;color:var(--muted)}
+.stats dd{margin:2px 0 0;font-weight:700}
+.note{font-size:.86rem;color:var(--muted);margin:10px 0 0}
+.banner{border-left:4px solid var(--warn);padding:7px 11px;margin:0 0 12px;font-size:.9rem;background:var(--surface);border-radius:0 8px 8px 0}
+.banner.err{border-color:var(--bad)}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{text-align:left;padding:6px;border-bottom:1px solid var(--line)}
+th{font-weight:600;color:var(--muted);font-size:.82rem}
+.tablewrap{overflow-x:auto}
+details{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface)}
+summary{cursor:pointer;font-weight:700}
+.params{display:grid;grid-template-columns:1fr 96px;gap:8px 12px;align-items:center;margin-top:12px;font-size:.9rem}
+.params input{font:inherit;width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:7px;background:var(--page);color:var(--ink);text-align:right}
+.params .grp{grid-column:1/-1;font-weight:700;margin-top:8px}
+
+/* SVG */
+svg text{font-family:"Archivo",system-ui,sans-serif}
+.edge-hit{cursor:pointer;stroke:transparent}
+.mode-pipes .edge-hit:hover{stroke:var(--hover)}
+.node-hit{cursor:pointer}
+.flowdash{animation:flow linear infinite}
+@keyframes flow{to{stroke-dashoffset:-32}}
+@media (prefers-reduced-motion:reduce){.flowdash{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="46" height="46" viewBox="0 0 46 46" aria-hidden="true">
+        <rect x="1" y="1" width="44" height="44" rx="11" fill="var(--accent)"/>
+        <path d="M23 9 C18 17 14 22 14 27 a9 9 0 0 0 18 0 C32 22 28 17 23 9Z" fill="var(--on-accent)" opacity=".95"/>
+        <path d="M14 33 H32" stroke="var(--accent)" stroke-width="2.4"/>
+        <path d="M19.5 33 V37 M23 33 V37 M26.5 33 V37" stroke="var(--on-accent)" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h1>Simulador de treino Aqualibrium</h1>
+      </div>
+    </div>
+    <div class="clockbox" aria-live="polite">
+      <div><div class="cap">Tempo de prova</div><div class="clock" id="clock">25:00</div></div>
+      <button id="tStart" class="primary">Iniciar</button>
+      <button id="tReset" class="ghost">Zerar</button>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="boardcol">
+      <div class="toolbar">
+        <div class="seg" role="group" aria-label="Modo de edição">
+          <button id="mPipes" aria-pressed="true">Editar tubos</button>
+          <button id="mRes" aria-pressed="false">Posicionar reservatórios</button>
+        </div>
+        <div class="actions">
+          <button id="draw">Sortear reservatórios</button>
+          <button id="clear" class="ghost">Limpar malha</button>
+        </div>
+      </div>
+      <svg id="board" viewBox="0 0 600 610" role="application" aria-label="Bancada com malha de 4 por 4 pontos"></svg>
+      <div class="legend">
+        <span><svg width="34" height="12"><line x1="2" y1="6" x2="32" y2="6" stroke="var(--pipe6)" stroke-width="8" stroke-linecap="round"/></svg>Tubo de 6 mm</span>
+        <span><svg width="34" height="12"><line x1="2" y1="6" x2="32" y2="6" stroke="var(--pipe3)" stroke-width="4" stroke-linecap="round"/></svg>Tubo de 3 mm</span>
+        <span><svg width="34" height="12"><line x1="2" y1="6" x2="32" y2="6" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 6" opacity=".6"/></svg>Aresta vazia</span>
+      </div>
+      <p class="hint" id="modeHint">Toque num trecho para alternar entre vazio, 6 mm e 3 mm.</p>
+      <div class="panel below">
+        <section>
+          <h2>Tentativas desta sessão</h2>
+          <div class="tablewrap"><table><thead><tr><th>#</th><th>Reservatórios</th><th>A / B / C (mL)</th><th>Penalidade</th></tr></thead><tbody id="hist"><tr><td colspan="4" style="color:var(--muted)">Nenhuma tentativa ainda.</td></tr></tbody></table></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="panel">
+      <section>
+        <h2>Simulação</h2>
+        <button class="primary big" id="run">Simular montagem</button>
+        <div class="bestbox">
+          <h3>Melhor montagem</h3>
+          <div class="stylepick">
+            <div class="seg" role="group" aria-label="Estilo da melhor montagem" id="stylePick">
+              <button data-lam="0" aria-pressed="false">Mais precisa</button>
+              <button data-lam="12" aria-pressed="false">Equilibrada</button>
+              <button data-lam="30" aria-pressed="true">Mais simples</button>
+            </div>
+          </div>
+          <div class="actions">
+            <button id="opt">Mostrar melhor montagem</button>
+            <button id="optStop" hidden>Parar busca</button>
+            <button id="optBack" hidden class="ghost">Voltar à minha montagem</button>
+          </div>
+          <p class="status" id="optStatus" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section>
+        <h2>Resultado</h2>
+        <div id="resultBanner"></div>
+        <div class="cyls" id="cyls"></div>
+        <div class="score"><span class="big" id="pen">–</span><span class="unit">mL de penalidade, soma dos desvios em relação a 1.000 mL</span></div>
+        <dl class="stats">
+          <div><dt>Tempo até 3 L</dt><dd id="sT">–</dd></div>
+          <div><dt>Vazão inicial</dt><dd id="sQ">–</dd></div>
+          <div><dt>Variação da divisão</dt><dd id="sD">–</dd></div>
+        </dl>
+        <p class="note" id="facts">Monte a malha e simule para ver a água chegar aos reservatórios.</p>
+      </section>
+
+      <section>
+        <h2>Peças do kit</h2>
+        <div class="extra">
+          <span class="cap">Regras adicionais</span>
+          <label><input type="checkbox" id="teeIn"> Tê no ponto 1 (entrada)</label>
+          <label><input type="checkbox" id="teeRes"> Tê nos três reservatórios</label>
+        </div>
+        <div class="kit" id="kit"></div>
+        <ul class="msgs" id="msgs"></ul>
+      </section>
+
+      <section>
+        <details>
+          <summary>Calibração do modelo</summary>
+          <div class="params" id="params"></div>
+          <div class="actions" style="margin-top:12px"><button id="resetP">Restaurar padrões</button></div>
+          <p class="note">Os valores padrão são estimativas. As perdas nas conexões de 3 mm dominam o problema, então o simulador acerta tendências antes de acertar volumes. Para calibrar, montem duas ou três redes no kit, meçam os volumes e ajustem os coeficientes K até o simulador reproduzir as medições.</p>
+          <p class="note">Modelo: rede horizontal resolvida pelo método de Newton nas cargas dos nós; perda distribuída por Darcy-Weisbach com f = máx(64/Re; 0,316·Re<sup>−0,25</sup>); perdas localizadas referidas à velocidade no conector; esvaziamento da fonte simulado em passos de tempo até chegarem 3 L.</p>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+const G = 9.81;
+const SP = 120, X0 = 150, Y0 = 175;
+const nodes = Array.from({length:16},(_,i)=>({r:Math.floor(i/4), c:i%4, x:X0+(i%4)*SP, y:Y0+Math.floor(i/4)*SP}));
+const edges = [];
+for(let r=0;r<4;r++) for(let c=0;c<3;c++) edges.push({a:r*4+c, b:r*4+c+1, h:true});
+for(let r=0;r<3;r++) for(let c=0;c<4;c++) edges.push({a:r*4+c, b:(r+1)*4+c, h:false});
+const LETTERS = ["A","B","C"];
+const STATE_NAME = ["vazio","tubo de 6 mm","tubo de 3 mm"];
+const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const DEFAULTS = {
+  zt:{v:0.40,l:"Base da fonte acima da malha (m)",g:"Geometria"},
+  hsrc:{v:0.10,l:"Lâmina d’água na fonte com 4 L (m)"},
+  zout:{v:0.15,l:"Malha acima da entrada dos reservatórios (m)"},
+  L:{v:0.30,l:"Comprimento de cada trecho (m)"},
+  d6:{v:6,l:"Diâmetro interno do tubo grande (mm)",g:"Diâmetros"},
+  d3:{v:3,l:"Diâmetro interno do tubo pequeno (mm)"},
+  dc:{v:3,l:"Diâmetro interno dos conectores (mm)"},
+  dsup:{v:10,l:"Diâmetro do tubo principal (mm)"},
+  lsup:{v:0.60,l:"Comprimento do tubo principal (m)"},
+  k6:{v:1.0,l:"K por trecho de 6 mm",g:"Perdas localizadas"},
+  k3:{v:0.4,l:"K por trecho de 3 mm"},
+  kout:{v:1.5,l:"K na saída para o reservatório"},
+  ksup:{v:1.0,l:"K na entrada do ponto 1"},
+  nu:{v:0.89,l:"Viscosidade cinemática (10⁻⁶ m²/s)",g:"Fluido"}
+};
+
+let es = Array(24).fill(0);
+let res = [];
+let mode = "pipes";
+let flows = null;
+let history = [];
+let P = {};
+let srcV = 0.004;
+let extraRules = {teeIn:true, teeRes:false};
+
+function loadSaved(){
+  try{
+    const s = JSON.parse(localStorage.getItem("aqua-train") || "null");
+    if(s && Array.isArray(s.es) && s.es.length===24) es = s.es.map(x=>(x|0)%3);
+    if(s && Array.isArray(s.res)) res = s.res.filter(x=>x>=0&&x<16).slice(0,3);
+    if(s && s.P) P = s.P;
+    if(s && s.extraRules) extraRules = Object.assign(extraRules, s.extraRules);
+  }catch(e){}
+  for(const k in DEFAULTS) if(typeof P[k]!=="number" || !isFinite(P[k])) P[k]=DEFAULTS[k].v;
+}
+function save(){
+  try{ localStorage.setItem("aqua-train", JSON.stringify({es,res,P,extraRules})); }catch(e){}
+}
+const fmt = (x,d)=>x.toLocaleString("pt-BR",{minimumFractionDigits:d,maximumFractionDigits:d});
+
+/* ---------- validação ---------- */
+function analyse(E){
+  E=E||es;
+  const adj = Array.from({length:16},()=>[]);
+  let n6=0,n3=0;
+  edges.forEach((e,k)=>{ if(E[k]){ adj[e.a].push(k); adj[e.b].push(k); if(E[k]===1) n6++; else n3++; } });
+  const empty = 24-n6-n3;
+  const conn = {reto:0,cotovelo:0,"tê":0,cruzeta:0};
+  const block = [], rule = [], info = [];
+  const nodeType = Array(16).fill("");
+  for(let i=0;i<16;i++){
+    const deg = adj[i].length;
+    const extra = (i===0 || res.includes(i)) ? 1 : 0;
+    const m = deg+extra;
+    if(m===0) continue;
+    if(deg===0){
+      if(i===0) block.push("O ponto 1 precisa de pelo menos um tubo ligado.");
+      else block.push("O reservatório "+LETTERS[res.indexOf(i)]+" (ponto "+(i+1)+") não tem nenhum tubo ligado.");
+      continue;
+    }
+    if(m===1){ block.push("Ponta aberta no ponto "+(i+1)+": um tubo termina sem continuação e a água vazaria."); continue; }
+    let t;
+    if(m===2){
+      if(extra) t="cotovelo";
+      else t = (edges[adj[i][0]].h===edges[adj[i][1]].h) ? "reto" : "cotovelo";
+    } else if(m===3) t="tê";
+    else if(m===4) t="cruzeta";
+    else { block.push("O ponto "+(i+1)+" teria "+m+" bocas (4 tubos mais a saída). Nenhum conector atende."); continue; }
+    conn[t]++; nodeType[i]=t;
+  }
+  // conectividade
+  const seen = Array(16).fill(false); seen[0]=true; const q=[0];
+  while(q.length){ const i=q.shift(); for(const k of adj[i]){ const e=edges[k]; const o=e.a===i?e.b:e.a; if(!seen[o]){seen[o]=true;q.push(o);} } }
+  res.forEach((r,j)=>{ if(adj[r].length && !seen[r]) block.push("O reservatório "+LETTERS[j]+" (ponto "+(r+1)+") não está ligado ao ponto 1."); });
+  let loose=0; edges.forEach((e,k)=>{ if(E[k] && !seen[e.a]) loose++; });
+  if(loose) info.push(loose+(loose>1?" tubos não estão":" tubo não está")+" ligado(s) ao ponto 1 e não conduz(em) água.");
+  if(res.length<3) block.push("Escolha os três reservatórios (sorteio ou modo Posicionar reservatórios).");
+  if(n6>12) rule.push("Há "+n6+" tubos de 6 mm; o kit tem 12.");
+  if(n3>12) rule.push("Há "+n3+" tubos de 3 mm; o kit tem 12.");
+  if(empty>8) rule.push(empty+" arestas vazias; o máximo é 8 (mínimo de 16 tubos).");
+  for(const t in conn) if(conn[t]>8) rule.push(conn[t]+" conectores do tipo "+t+"; o limite é 8.");
+  let excess=Math.max(0,n6-12)+Math.max(0,n3-12)+Math.max(0,empty-8);
+  const needTee=[];
+  if(extraRules.teeIn) needTee.push([0,"ponto 1"]);
+  if(extraRules.teeRes) res.forEach((r,j)=>needTee.push([r,"reservatório "+LETTERS[j]+" (ponto "+(r+1)+")"]));
+  for(const [i,nm] of needTee){
+    if(adj[i].length && nodeType[i]!=="tê"){
+      excess++;
+      rule.push("Regra adicional: o "+nm+" deve ter um tê"+(nodeType[i]?", mas está com "+(nodeType[i]==="cruzeta"?"uma ":"um ")+nodeType[i]:"")+".");
+    }
+  }
+  for(const t in conn) excess+=Math.max(0,conn[t]-8);
+  return {adj,n6,n3,empty,conn,block,rule,info,seen,nodeType,excess};
+}
+
+/* ---------- hidráulica ---------- */
+const RE_STAR=Math.pow(64/0.316,1/0.75);
+function coef(p,nu){
+  if(p._nu===nu) return p._c;
+  const A=Math.PI*p.D*p.D/4, Ac=Math.PI*p.Dc*p.Dc/4;
+  const a=p.L>0 ? 32*nu*p.L/(G*p.D*p.D*A) : 0;
+  const c=p.L>0 ? 0.316*Math.pow(nu/p.D,0.25)*p.L/(2*G*p.D*Math.pow(A,1.75)) : 0;
+  const b=p.K/(2*G*Ac*Ac);
+  const qs=RE_STAR*nu*A/p.D;
+  p._nu=nu; p._c={a,b,c,qs,hs:a*qs+b*qs*qs};
+  return p._c;
+}
+function pipeQ(dh,p,nu){
+  const k=coef(p,nu), s=dh<0?-1:1, h=Math.abs(dh);
+  if(h<=k.hs || k.c===0){
+    const q = k.b===0 ? h/k.a : (-k.a+Math.sqrt(k.a*k.a+4*k.b*h))/(2*k.b);
+    const d=k.a+2*k.b*q;
+    return [s*q, d>0?1/d:1e12];
+  }
+  let q=k.qs*Math.sqrt(h/k.hs);
+  for(let i=0;i<40;i++){
+    const f=k.c*Math.pow(q,1.75)+k.b*q*q-h;
+    const d=1.75*k.c*Math.pow(q,0.75)+2*k.b*q;
+    let qn=q-f/d; if(qn<k.qs) qn=(q+k.qs)/2;
+    const done=Math.abs(qn-q)<=1e-10*q; q=qn; if(done) break;
+  }
+  return [s*q, 1/(1.75*k.c*Math.pow(q,0.75)+2*k.b*q)];
+}
+function gauss(A,b){
+  const n=b.length;
+  for(let c=0;c<n;c++){
+    let piv=c; for(let r=c+1;r<n;r++) if(Math.abs(A[r][c])>Math.abs(A[piv][c])) piv=r;
+    if(piv!==c){ [A[c],A[piv]]=[A[piv],A[c]]; [b[c],b[piv]]=[b[piv],b[c]]; }
+    const d=A[c][c]; if(Math.abs(d)<1e-300) continue;
+    for(let r=c+1;r<n;r++){ const f=A[r][c]/d; if(!f) continue; for(let k=c;k<n;k++) A[r][k]-=f*A[c][k]; b[r]-=f*b[c]; }
+  }
+  const x=new Float64Array(n);
+  for(let r=n-1;r>=0;r--){ let s=b[r]; for(let k=r+1;k<n;k++) s-=A[r][k]*x[k]; x[r]=Math.abs(A[r][r])>1e-300? s/A[r][r] : 0; }
+  return x;
+}
+function buildCfg(an,E){
+  E=E||es;
+  const nu=P.nu*1e-6;
+  const idx=Array(16).fill(-1); const list=[];
+  for(let i=0;i<16;i++) if(an.seen[i] && (i===0 || an.adj[i].length)) { idx[i]=list.length; list.push(i); }
+  const p6={D:P.d6/1000,L:P.L,Dc:P.dc/1000,K:P.k6};
+  const p3={D:P.d3/1000,L:P.L,Dc:P.dc/1000,K:P.k3};
+  const pipes=[];
+  edges.forEach((e,k)=>{ if(E[k] && idx[e.a]>=0 && idx[e.b]>=0) pipes.push({k,i:idx[e.a],j:idx[e.b],p:E[k]===1?p6:p3}); });
+  return {
+    n:list.length, nu, pipes,
+    outs: res.map(r=>idx[r]),
+    psup:{D:P.dsup/1000,L:P.lsup,Dc:P.dc/1000,K:P.ksup},
+    pout:{D:P.dc/1000,L:0.05,Dc:P.dc/1000,K:P.kout},
+    zo:-P.zout
+  };
+}
+function newton(cfg,Hs,H){
+  const n=cfg.n;
+  for(let it=0;it<80;it++){
+    const R=new Float64Array(n), J=Array.from({length:n},()=>new Float64Array(n));
+    for(const pp of cfg.pipes){
+      const [q,g]=pipeQ(H[pp.i]-H[pp.j],pp.p,cfg.nu);
+      R[pp.i]+=q; R[pp.j]-=q; J[pp.i][pp.i]+=g; J[pp.j][pp.j]+=g; J[pp.i][pp.j]-=g; J[pp.j][pp.i]-=g;
+    }
+    { const [q,g]=pipeQ(Hs-H[0],cfg.psup,cfg.nu); R[0]-=q; J[0][0]+=g; }
+    for(const o of cfg.outs){ if(o<0) continue; const [q,g]=pipeQ(H[o]-cfg.zo,cfg.pout,cfg.nu); R[o]+=q; J[o][o]+=g; }
+    let mr=0; for(let i=0;i<n;i++) mr=Math.max(mr,Math.abs(R[i]));
+    if(mr<1e-11) break;
+    const d=gauss(J,Array.from(R,x=>-x));
+    const lim=0.3*Math.max(Hs-cfg.zo,0.01);
+    let md=0; for(let i=0;i<n;i++) md=Math.max(md,Math.abs(d[i]));
+    const sc=md>lim?lim/md:1;
+    for(let i=0;i<n;i++) H[i]+=sc*d[i];
+  }
+  const fl={};
+  for(const pp of cfg.pipes) fl[pp.k]=pipeQ(H[pp.i]-H[pp.j],pp.p,cfg.nu)[0];
+  const outQ=cfg.outs.map(o=>o<0?0:Math.max(0,pipeQ(H[o]-cfg.zo,cfg.pout,cfg.nu)[0]));
+  return {fl,outQ};
+}
+function simulate(an,E){
+  const cfg=buildCfg(an,E);
+  const Asrc=0.004/Math.max(P.hsrc,1e-3);
+  let V=0.004, t=0;
+  const H=new Float64Array(cfg.n).fill(P.zt*0.5);
+  const del=[0,0,0];
+  let first=null, lastShares=null;
+  const trace=[{t:0,d:[0,0,0],V:V}];
+  for(let step=0;step<3000;step++){
+    const Hs=P.zt+V/Asrc;
+    const s=newton(cfg,Hs,H);
+    const Qt=s.outQ.reduce((a,b)=>a+b,0);
+    if(Qt<1e-9) return {error:"A água não chega aos reservatórios com estes parâmetros. Confira a altura da fonte e a ligação da malha."};
+    if(!first) first={fl:s.fl,Qt,shares:s.outQ.map(q=>q/Qt)};
+    const tot=del[0]+del[1]+del[2];
+    let dt=Math.min(2,2e-5/Qt), done=false;
+    if(tot+Qt*dt>=0.003){ dt=(0.003-tot)/Qt; done=true; }
+    for(let k=0;k<3;k++) del[k]+=s.outQ[k]*dt;
+    V-=Qt*dt; t+=dt;
+    lastShares=s.outQ.map(q=>q/Qt);
+    trace.push({t:t,d:del.slice(),V:V});
+    if(done) break;
+  }
+  return {vols:del.map(v=>v*1e6), t, first, lastShares, trace, Vend:V};
+}
+
+/* ---------- busca da melhor montagem ---------- */
+let simplicity=30;
+function lines(E){
+  const L=[];
+  for(let r=0;r<4;r++) L.push({name:"Linha "+(r+1), whole:"linha inteira", ks:[0,1,2].map(c=>r*3+c), nodes:[0,1,2,3].map(c=>r*4+c+1)});
+  for(let c=0;c<4;c++) L.push({name:"Coluna "+(c+1), whole:"coluna inteira", ks:[0,1,2].map(r=>12+r*4+c), nodes:[0,1,2,3].map(r=>r*4+c+1)});
+  return L.map(l=>{
+    const runs=[];
+    l.ks.forEach((k,i)=>{ const st=E[k]; const last=runs[runs.length-1];
+      if(last && last.s===st) last.to=l.nodes[i+1]; else runs.push({s:st,from:l.nodes[i],to:l.nodes[i+1]}); });
+    return {name:l.name,whole:l.whole,runs};
+  });
+}
+function runsCount(E){ let n=0; for(const l of lines(E)) n+=l.runs.length; return n; }
+function steadyShares(an,E){
+  const cfg=buildCfg(an,E);
+  const Hs=P.zt+0.0025/(0.004/Math.max(P.hsrc,1e-3));
+  const H=new Float64Array(cfg.n).fill(P.zt*0.5);
+  const s=newton(cfg,Hs,H);
+  const Qt=s.outQ.reduce((a,b)=>a+b,0);
+  return Qt>1e-9 ? s.outQ.map(q=>q/Qt) : null;
+}
+function cost(E){
+  const an=analyse(E);
+  if(an.block.length) return {c:5000+400*an.block.length+300*an.excess, valid:false};
+  const sh=steadyShares(an,E);
+  if(!sh) return {c:9000, valid:false};
+  const err=3000*sh.reduce((a,x)=>a+Math.abs(x-1/3),0);
+  return {c:err+300*an.excess+simplicity*(runsCount(E)-8), valid:an.excess===0};
+}
+function optimise(onProgress,onDone){
+  const RESTARTS=4, ITERS=2000;
+  const st={r:0,i:0,n:0,x:null,cx:null,best:[],stop:false};
+  const rnd=n=>Math.floor(Math.random()*n);
+  function restart(){
+    st.x=Array.from({length:24},()=>Math.random()<0.25?0:(Math.random()<0.5?1:2));
+    st.cx=cost(st.x); st.i=0;
+  }
+  function keep(x,c){
+    if(!c.valid) return;
+    const key=x.join("");
+    if(st.best.some(b=>b.key===key)) return;
+    st.best.push({key,x:x.slice(),c:c.c}); st.best.sort((a,b)=>a.c-b.c);
+    if(st.best.length>10) st.best.pop();
+  }
+  restart();
+  function slice(){
+    const t0=performance.now();
+    while(performance.now()-t0<35){
+      if(st.stop || st.r>=RESTARTS){ onDone(st); return; }
+      const T=300*Math.pow(1/300, st.i/ITERS);
+      const y=st.x.slice();
+      if(Math.random()<0.3){ const a=rnd(24), b=rnd(24); const t=y[a]; y[a]=y[b]; y[b]=t; }
+      else { const k=rnd(24); y[k]=(y[k]+1+rnd(2))%3; }
+      const cy=cost(y); st.n++;
+      if(cy.c<=st.cx.c || Math.random()<Math.exp((st.cx.c-cy.c)/T)){ st.x=y; st.cx=cy; keep(y,cy); }
+      if(++st.i>=ITERS){ st.r++; if(st.r<RESTARTS) restart(); }
+    }
+    onProgress(st, (st.r*ITERS+st.i)/(RESTARTS*ITERS));
+    setTimeout(slice,0);
+  }
+  setTimeout(slice,0);
+  return st;
+}
+
+
+
+/* ---------- desenho da bancada ---------- */
+const svg=document.getElementById("board");
+const DIRS = (i,an)=>an.adj[i].map(k=>{ const e=edges[k]; const o=e.a===i?e.b:e.a; return Math.atan2(nodes[o].y-nodes[i].y, nodes[o].x-nodes[i].x)*180/Math.PI; });
+function stub(x,y,ang){
+  return '<g transform="translate('+x+' '+y+') rotate('+ang+')">'+
+    '<rect x="6" y="-5" width="19" height="10" rx="2" fill="var(--fit)" stroke="var(--fit-edge)" stroke-width="1.2"/>'+
+    '<path d="M15 -6.2 V6.2 M21 -6.2 V6.2" stroke="var(--fit-edge)" stroke-width="1.4"/></g>';
+}
+function render(){
+  const an=analyse();
+  let s='<rect x="6" y="6" width="588" height="598" rx="18" fill="var(--board)" stroke="var(--board-edge)" stroke-width="1.5"/>';
+  // fonte e tubo principal
+  s+='<path d="M75 92 V'+Y0+' H'+X0+'" fill="none" stroke="var(--pipe6)" stroke-width="10" stroke-linejoin="round" opacity=".55"/>';
+  s+='<rect x="40" y="44" width="70" height="48" rx="6" fill="var(--res-fill)" stroke="var(--ink)" stroke-width="1.5"/>';
+  s+='<text x="75" y="73" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">Fonte</text>';
+  // trechos
+  edges.forEach((e,k)=>{
+    const A=nodes[e.a], B=nodes[e.b], st=es[k];
+    if(st===0) s+='<line x1="'+A.x+'" y1="'+A.y+'" x2="'+B.x+'" y2="'+B.y+'" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 7" opacity=".55"/>';
+    else s+='<line x1="'+A.x+'" y1="'+A.y+'" x2="'+B.x+'" y2="'+B.y+'" stroke="'+(st===1?"var(--pipe6)":"var(--pipe3)")+'" stroke-width="'+(st===1?10:4.5)+'" stroke-linecap="round"/>';
+  });
+  // vazões
+  if(flows){
+    let qmax=0; for(const k in flows) qmax=Math.max(qmax,Math.abs(flows[k]));
+    for(const k in flows){
+      const q=flows[k]; if(Math.abs(q)<qmax*0.01) continue;
+      const e=edges[k], A=nodes[e.a], B=nodes[e.b];
+      const mx=(A.x+B.x)/2, my=(A.y+B.y)/2;
+      let ang=Math.atan2(B.y-A.y,B.x-A.x)*180/Math.PI; if(q<0) ang+=180;
+      s+='<g transform="translate('+mx+' '+my+') rotate('+ang+')"><path d="M-7 -7 L7 0 L-7 7 Z" fill="var(--ink)"/></g>';
+      s+='<text x="'+(e.h?mx:mx+17)+'" y="'+(e.h?my-15:my+4)+'" font-size="12" text-anchor="'+(e.h?"middle":"start")+'" fill="var(--muted)">'+fmt(Math.abs(q)*1e6,1)+'</text>';
+    }
+  }
+  // áreas de toque dos trechos
+  edges.forEach((e,k)=>{
+    const A=nodes[e.a], B=nodes[e.b];
+    const lbl="Trecho entre os pontos "+(e.a+1)+" e "+(e.b+1)+": "+STATE_NAME[es[k]];
+    s+='<line class="edge-hit" data-e="'+k+'" x1="'+(A.x+(B.x-A.x)*.14)+'" y1="'+(A.y+(B.y-A.y)*.14)+'" x2="'+(B.x-(B.x-A.x)*.14)+'" y2="'+(B.y-(B.y-A.y)*.14)+'" stroke-width="30" stroke-linecap="round" tabindex="'+(mode==="pipes"?0:-1)+'" role="button" aria-label="'+lbl+'"><title>'+lbl+'</title></line>';
+  });
+  // pontos
+  nodes.forEach((n,i)=>{
+    const ri=res.indexOf(i);
+    const lbl="Ponto "+(i+1)+(i===0?", entrada":"")+(ri>=0?", reservatório "+LETTERS[ri]:"")+(an.nodeType[i]?", conector "+an.nodeType[i]:"");
+    s+='<g class="node-hit" data-n="'+i+'" tabindex="'+(mode==="res"&&i!==0?0:-1)+'" role="button" aria-label="'+lbl+'"><title>'+lbl+'</title>';
+    s+='<circle cx="'+n.x+'" cy="'+n.y+'" r="22" fill="transparent"/>';
+    if(i===0){
+      s+='<rect x="'+(n.x-13)+'" y="'+(n.y-13)+'" width="26" height="26" rx="5" fill="var(--ink)"/>';
+      s+='<text x="'+n.x+'" y="'+(n.y+5)+'" text-anchor="middle" font-size="14" font-weight="700" fill="var(--page)">1</text>';
+    } else if(ri>=0){
+      s+='<circle cx="'+n.x+'" cy="'+n.y+'" r="16" fill="var(--res-fill)" stroke="var(--water)" stroke-width="3"/>';
+      s+='<text x="'+n.x+'" y="'+(n.y+5)+'" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">'+LETTERS[ri]+'</text>';
+    } else {
+      s+='<circle cx="'+n.x+'" cy="'+n.y+'" r="6.5" fill="var(--board)" stroke="var(--ink)" stroke-width="2"/>';
+    }
+    s+='<text x="'+(n.x+(ri>=0?20:11))+'" y="'+(n.y+(ri>=0?25:21))+'" font-size="11" fill="var(--muted)">'+(i+1)+'</text>';
+    s+='</g>';
+  });
+  svg.innerHTML=s;
+  svg.classList.toggle("mode-pipes",mode==="pipes");
+  renderKit(an);
+  return an;
+}
+
+/* ---------- receita ---------- */
+function renderRecipe(){
+  const LBL=["vazio","6 mm","3 mm"];
+  const L=lines(es);
+  document.getElementById("recipe").innerHTML=L.map(l=>
+    '<div class="rline"><span class="rname">'+l.name+'</span>'+
+    l.runs.map(r=>'<span class="chip c'+r.s+'">'+(l.runs.length===1?l.whole:(r.from+" a "+r.to))+": "+LBL[r.s]+'</span>').join("")+
+    '</div>').join("");
+  const n=L.reduce((a,l)=>a+l.runs.length,0);
+  document.getElementById("recipeNote").textContent="Cada linha e coluna da malha descrita por trechos retos do mesmo tipo. Esta montagem tem "+n+" trechos; quanto mais perto de 8, mais fácil de memorizar e montar na prova.";
+}
+
+/* ---------- peças do kit ---------- */
+function icon(kind){
+  const T=(c,w1,w2,w3)=>'<line x1="2" y1="12" x2="38" y2="12" stroke="'+c[0]+'" stroke-width="'+w1+'"/><line x1="2" y1="12" x2="38" y2="12" stroke="'+c[1]+'" stroke-width="'+w2+'"/><line x1="2" y1="12" x2="38" y2="12" stroke="var(--water)" stroke-width="'+w3+'"/>';
+  const F=(angs)=>angs.map(a=>'<g transform="translate(20 12) rotate('+a+')"><rect x="4" y="-3.6" width="10" height="7.2" rx="1.5" fill="var(--fit)" stroke="var(--fit-edge)"/></g>').join("")+'<circle cx="20" cy="12" r="6" fill="var(--fit)" stroke="var(--fit-edge)" stroke-width="1.2"/>';
+  let b="";
+  if(kind==="n6") b='<line x1="4" y1="12" x2="36" y2="12" stroke="var(--pipe6)" stroke-width="8" stroke-linecap="round"/>';
+  else if(kind==="n3") b='<line x1="4" y1="12" x2="36" y2="12" stroke="var(--pipe3)" stroke-width="4" stroke-linecap="round"/>';
+  else if(kind==="empty") b='<line x1="2" y1="12" x2="38" y2="12" stroke="var(--guide)" stroke-width="1.8" stroke-dasharray="2 5"/>';
+  else if(kind==="reto") b=F([0,180]);
+  else if(kind==="cotovelo") b=F([0,90]);
+  else if(kind==="tê") b=F([0,180,90]);
+  else if(kind==="cruzeta") b=F([0,90,180,270]);
+  return '<svg width="40" height="24" viewBox="0 0 40 24" aria-hidden="true">'+b+'</svg>';
+}
+function renderKit(an){
+  const items=[
+    ["n6","Tubos de 6 mm",an.n6,12],["n3","Tubos de 3 mm",an.n3,12],
+    ["empty","Arestas vazias",an.empty,8],["reto","Retos",an.conn.reto,8],
+    ["cotovelo","Cotovelos",an.conn.cotovelo,8],["tê","Tês",an.conn["tê"],8],
+    ["cruzeta","Cruzetas",an.conn.cruzeta,8]
+  ];
+  document.getElementById("kit").innerHTML=items.map(([k,l,v,m])=>{
+    const over=v>m;
+    return '<div class="piece">'+icon(k)+'<span class="nm">'+l+'</span><span class="ct'+(over?" over":"")+'">'+v+' de '+m+'</span><span class="bar"><i class="'+(over?"over":"")+'" style="width:'+Math.min(100,v/m*100)+'%"></i></span></div>';
+  }).join("");
+  let h="";
+  an.block.forEach(x=>h+='<li class="err">'+x+'</li>');
+  an.rule.forEach(x=>h+='<li class="rule">'+x+'</li>');
+  an.info.forEach(x=>h+='<li class="info">'+x+'</li>');
+  if(!h) h='<li class="ok">Montagem dentro das regras do edital.</li>';
+  document.getElementById("msgs").innerHTML=h;
+}
+
+/* ---------- provetas e animação ---------- */
+const CYL_MAX=1500;
+function buildCyls(){
+  document.getElementById("cyls").innerHTML=LETTERS.map((L,j)=>
+    '<div class="cyl"><div class="glass"><div class="ticks"></div><div class="mark"><span>1 L</span></div><div class="water" id="w'+j+'"></div></div>'+
+    '<div class="cvol" id="v'+j+'">–</div><div class="cdev" id="dv'+j+'">&nbsp;</div><div class="clab">Reservatório '+L+'</div></div>').join("");
+}
+function setCyls(vols,final){
+  for(let j=0;j<3;j++){
+    const w=document.getElementById("w"+j), v=document.getElementById("v"+j), dv=document.getElementById("dv"+j);
+    if(!vols){ w.style.height="0"; v.textContent="–"; dv.innerHTML="&nbsp;"; continue; }
+    w.style.height=Math.min(vols[j]/CYL_MAX,1)*100+"%";
+    v.textContent=Math.round(vols[j]).toLocaleString("pt-BR")+" mL";
+    if(final){ const d=Math.round(vols[j]-1000); dv.textContent=(d>0?"+":d<0?"−":"")+Math.abs(d).toLocaleString("pt-BR")+" mL"; }
+    else dv.innerHTML="&nbsp;";
+  }
+}
+function setSrc(V){
+  srcV=V;
+  const r=document.getElementById("srcWater"), l=document.getElementById("srcLabel");
+  if(!r) return;
+  const h=Math.max(0,Math.min(1,V/0.004))*82;
+  r.setAttribute("y",116-h); r.setAttribute("height",h);
+  l.textContent=fmt(V*1000,1)+" L";
+}
+let anim=null;
+function play(r,done){
+  if(anim) cancelAnimationFrame(anim);
+  const tr=r.trace, T=r.t, dur=reduceMotion?0:2400, t0=performance.now();
+  function frame(now){
+    const f=dur?Math.min(1,(now-t0)/dur):1;
+    const e=1-Math.pow(1-f,2);
+    const tt=e*T;
+    let i=0; while(i<tr.length-2 && tr[i+1].t<tt) i++;
+    const a=tr[i], b=tr[Math.min(i+1,tr.length-1)];
+    const w=b.t>a.t?Math.max(0,Math.min(1,(tt-a.t)/(b.t-a.t))):1;
+    setCyls([0,1,2].map(j=>(a.d[j]+(b.d[j]-a.d[j])*w)*1e6),false);
+    setSrc(a.V+(b.V-a.V)*w);
+    if(f<1) anim=requestAnimationFrame(frame);
+    else { anim=null; setCyls(r.vols,true); setSrc(r.Vend); done(); }
+  }
+  anim=requestAnimationFrame(frame);
+}
+function clearResult(){
+  if(anim){ cancelAnimationFrame(anim); anim=null; }
+  flows=null; srcV=0.004;
+  setCyls(null);
+  document.getElementById("pen").textContent="–";
+  ["sT","sQ","sD"].forEach(id=>document.getElementById(id).textContent="–");
+  document.getElementById("facts").textContent="Monte a malha e simule para ver a água chegar aos reservatórios.";
+  document.getElementById("resultBanner").innerHTML="";
+}
+
+/* ---------- interação ---------- */
+function setMode(m){
+  mode=m;
+  document.getElementById("mPipes").setAttribute("aria-pressed",m==="pipes");
+  document.getElementById("mRes").setAttribute("aria-pressed",m==="res");
+  document.getElementById("modeHint").textContent= m==="pipes"
+    ? "Toque num trecho para alternar entre vazio, 6 mm e 3 mm."
+    : "Toque num ponto para marcar ou desmarcar um reservatório. O ponto 1 é a entrada e não recebe reservatório.";
+  render();
+}
+function act(target){
+  const e=target.closest("[data-e]"), n=target.closest("[data-n]");
+  if(mode==="pipes" && e){ const k=+e.dataset.e; es[k]=(es[k]+1)%3; changed(); return; }
+  if(mode==="res" && n){
+    const i=+n.dataset.n; if(i===0) return;
+    const p=res.indexOf(i);
+    if(p>=0) res.splice(p,1); else if(res.length<3) res.push(i); else { res.shift(); res.push(i); }
+    changed();
+  }
+}
+function changed(){ clearResult(); save(); render(); }
+svg.addEventListener("click",ev=>act(ev.target));
+svg.addEventListener("keydown",ev=>{
+  if(ev.key!=="Enter" && ev.key!==" ") return;
+  ev.preventDefault();
+  const t=document.activeElement; if(!t || !t.dataset) return;
+  const k=t.dataset.e, nn=t.dataset.n;
+  act(t);
+  const sel=k!==undefined?'[data-e="'+k+'"]':(nn!==undefined?'[data-n="'+nn+'"]':null);
+  if(sel){ const el=svg.querySelector(sel); if(el) el.focus(); }
+});
+document.getElementById("mPipes").onclick=()=>setMode("pipes");
+["teeIn","teeRes"].forEach(id=>{ const el=document.getElementById(id); el.addEventListener("change",()=>{ extraRules[id]=el.checked; changed(); }); });
+document.getElementById("mRes").onclick=()=>setMode("res");
+function drawRes(){
+  const pool=[]; for(let i=1;i<16;i++) pool.push(i);
+  res=[]; while(res.length<3){ res.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]); }
+  res.sort((a,b)=>a-b);
+}
+document.getElementById("draw").onclick=()=>{ drawRes(); changed(); };
+document.getElementById("clear").onclick=()=>{ es=Array(24).fill(0); changed(); };
+
+function runSim(tag){
+  const an=analyse();
+  const banner=document.getElementById("resultBanner");
+  if(an.block.length){
+    clearResult(); render();
+    banner.innerHTML='<div class="banner err">Corrija os itens marcados em vermelho em Peças do kit antes de simular.</div>';
+    return;
+  }
+  const r=simulate(an);
+  if(r.error){ clearResult(); render(); banner.innerHTML='<div class="banner err">'+r.error+'</div>'; return; }
+  flows=r.first.fl; srcV=0.004;
+  render();
+  banner.innerHTML=an.rule.length?'<div class="banner">Montagem fora do edital: o resultado serve só como estudo.</div>':"";
+  const pen=r.vols.reduce((a,v)=>a+Math.abs(v-1000),0);
+  const drift=Math.max(...r.first.shares.map((s,j)=>Math.abs(s-r.lastShares[j])))*100;
+  document.getElementById("pen").textContent="…";
+  play(r,()=>{
+    document.getElementById("pen").textContent=Math.round(pen).toLocaleString("pt-BR");
+    document.getElementById("sT").textContent=Math.round(r.t)+" s";
+    document.getElementById("sQ").textContent=fmt(r.first.Qt*1e6,1)+" mL/s";
+    document.getElementById("sD").textContent=fmt(drift,1)+" p.p.";
+    document.getElementById("facts").textContent="Os números nos trechos são as vazões iniciais, em mL/s. A variação da divisão mostra quanto a parcela de cada reservatório mudou entre o início e o fim, à medida que a fonte esvaziou.";
+  });
+  history.unshift({res:res.map(i=>i+1).join(", ")+(tag||""), vols:r.vols, pen, ok:!an.rule.length});
+  history=history.slice(0,12);
+  document.getElementById("hist").innerHTML=history.map((h,j)=>'<tr><td>'+(history.length-j)+'</td><td>'+h.res+'</td><td>'+h.vols.map(v=>Math.round(v)).join(" / ")+'</td><td>'+Math.round(h.pen)+(h.ok?"":" (fora do edital)")+'</td></tr>').join("");
+}
+document.getElementById("run").onclick=()=>runSim("");
+
+/* ---------- busca ---------- */
+let optState=null, savedEs=null;
+const optBtn=document.getElementById("opt"), optStop=document.getElementById("optStop"), optBack=document.getElementById("optBack"), optStatus=document.getElementById("optStatus");
+optBtn.onclick=()=>{
+  if(res.length<3){ optStatus.textContent="Defina os três reservatórios antes de buscar."; return; }
+  savedEs=es.slice();
+  optBtn.disabled=true; document.getElementById("run").disabled=true; optStop.hidden=false; optBack.hidden=true;
+  optStatus.textContent="Buscando…";
+  optState=optimise(
+    (st,f)=>{ optStatus.textContent="Buscando: "+Math.round(f*100)+"% ("+st.n.toLocaleString("pt-BR")+" montagens testadas)"; },
+    (st)=>{
+      optBtn.disabled=false; document.getElementById("run").disabled=false; optStop.hidden=true;
+      if(!st.best.length){ optStatus.textContent="Nenhuma montagem dentro do edital foi encontrada para estes reservatórios. Tente buscar de novo."; return; }
+      const base={k6:P.k6,k3:P.k3,kout:P.kout};
+      const scen=[1,0.5,1.5];
+      let win=null;
+      for(const b of st.best){
+        let worst=0, ok=true;
+        for(const f of scen){
+          P.k6=base.k6*f; P.k3=base.k3*f; P.kout=base.kout*f;
+          const r=simulate(analyse(b.x),b.x); if(r.error){ ok=false; break; }
+          worst=Math.max(worst, r.vols.reduce((a,v)=>a+Math.abs(v-1000),0));
+        }
+        Object.assign(P,base);
+        const runs=runsCount(b.x), score=worst+simplicity*(runs-8);
+        if(ok && (!win || score<win.score)) win={x:b.x,worst,runs,score};
+      }
+      if(!win){ optStatus.textContent="A busca não convergiu. Tente de novo."; return; }
+      es=win.x.slice(); save();
+      runSim(" (busca)");
+      optBack.hidden=false;
+      optStatus.textContent="Montagem encontrada após "+st.n.toLocaleString("pt-BR")+" testes, descrita em "+win.runs+" trechos retos uniformes (o mínimo possível é 8, um por linha e coluna). Mesmo com as perdas nas conexões 50% menores ou maiores que as da calibração, a penalidade prevista não passa de "+Math.round(win.worst).toLocaleString("pt-BR")+" mL. É uma busca heurística: a solução é muito boa segundo o modelo, sem garantia de ser o ótimo absoluto, e buscar de novo pode revelar alternativas.";
+    });
+};
+optStop.onclick=()=>{ if(optState) optState.stop=true; };
+document.querySelectorAll("#stylePick button").forEach(b=>b.onclick=()=>{
+  simplicity=+b.dataset.lam;
+  document.querySelectorAll("#stylePick button").forEach(x=>x.setAttribute("aria-pressed",x===b));
+});
+optBack.onclick=()=>{ if(savedEs){ es=savedEs.slice(); optBack.hidden=true; optStatus.textContent=""; changed(); } };
+
+/* ---------- parâmetros ---------- */
+function renderParams(){
+  const box=document.getElementById("params");
+  let h="";
+  for(const k in DEFAULTS){
+    const d=DEFAULTS[k];
+    if(d.g) h+='<div class="grp">'+d.g+'</div>';
+    h+='<label for="p_'+k+'">'+d.l+'</label><input id="p_'+k+'" type="number" step="any" inputmode="decimal" value="'+P[k]+'">';
+  }
+  box.innerHTML=h;
+  for(const k in DEFAULTS){
+    document.getElementById("p_"+k).addEventListener("change",ev=>{
+      const v=parseFloat(String(ev.target.value).replace(",","."));
+      if(isFinite(v) && v>=0){ P[k]=v; } else { ev.target.value=P[k]; }
+      changed();
+    });
+  }
+}
+document.getElementById("resetP").onclick=()=>{ for(const k in DEFAULTS) P[k]=DEFAULTS[k].v; renderParams(); changed(); };
+
+/* ---------- cronômetro ---------- */
+let remain=25*60, timer=null;
+const clock=document.getElementById("clock"), tStart=document.getElementById("tStart");
+function showClock(){ const m=Math.floor(remain/60), s=remain%60; clock.textContent=String(m).padStart(2,"0")+":"+String(s).padStart(2,"0"); clock.classList.toggle("low",remain<=300); }
+tStart.onclick=()=>{
+  if(timer){ clearInterval(timer); timer=null; tStart.textContent="Continuar"; return; }
+  if(remain<=0) remain=25*60;
+  tStart.textContent="Pausar";
+  timer=setInterval(()=>{ remain--; showClock(); if(remain<=0){ clearInterval(timer); timer=null; tStart.textContent="Iniciar"; clock.textContent="Tempo!"; } },1000);
+};
+document.getElementById("tReset").onclick=()=>{ if(timer){clearInterval(timer);timer=null;} remain=25*60; tStart.textContent="Iniciar"; showClock(); };
+
+loadSaved();
+if(res.length<3) drawRes();
+document.getElementById("teeIn").checked=extraRules.teeIn;
+document.getElementById("teeRes").checked=extraRules.teeRes;
+renderParams();
+buildCyls();
+setCyls(null);
+render();
+})();
+</script>
+</body>
+</html>
